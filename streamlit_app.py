@@ -1,31 +1,46 @@
-# Streamlitライブラリをインポート
 import streamlit as st
+import yt_dlp
+import os
 
-# ページ設定（タブに表示されるタイトル、表示幅）
-st.set_page_config(page_title="タイトル", layout="wide")
+st.set_page_config(page_title="easyYDL", layout="wide")
 
-# タイトルを設定
-st.title('Streamlitのサンプルアプリ')
+# App title and creator
+st.title("easyYDL")
+st.caption("Created by Dit-Lab.(Daiki Ito)")
 
-# テキスト入力ボックスを作成し、ユーザーからの入力を受け取る
-user_input = st.text_input('あなたの名前を入力してください')
+# Introduction
+st.markdown("""
+## **概要**
+このウェブアプリケーションでは、YouTube動画のDLを行うことができます（自己責任）。iPadなどのデバイスでも対応しています。""")
 
-# ボタンを作成し、クリックされたらメッセージを表示
-if st.button('挨拶する'):
-    if user_input:  # 名前が入力されているかチェック
-        st.success(f'🌟 こんにちは、{user_input}さん! 🌟')  # メッセージをハイライト
+url = st.text_input("YouTubeのURLを入力してください")
+format = st.radio("ダウンロード形式を選択してください", ('mp4', 'mp3'))
+
+if st.button("ダウンロード"):
+    if url:
+        try:
+            with st.spinner("ダウンロード中..."):
+                output_path = "downloads"
+                os.makedirs(output_path, exist_ok=True)
+                
+                ydl_opts = {
+                    'format': 'bestaudio/best' if format == 'mp3' else 'bestvideo+bestaudio/best',
+                    'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }] if format == 'mp3' else [],
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                
+            st.success(f"ダウンロードが完了しました！ {output_path} フォルダを確認してください。")
+        except Exception as e:
+            st.error(f"エラーが発生しました: {str(e)}")
     else:
-        st.error('名前を入力してください。')  # エラーメッセージを表示
+        st.warning("URLを入力してください。")
 
-# スライダーを作成し、値を選択
-number = st.slider('好きな数字（10進数）を選んでください', 0, 100)
-
-# 補足メッセージ
-st.caption("十字キー（左右）でも調整できます。")
-
-# 選択した数字を表示
-st.write(f'あなたが選んだ数字は「{number}」です。')
-
-# 選択した数値を2進数に変換
-binary_representation = bin(number)[2:]  # 'bin'関数で2進数に変換し、先頭の'0b'を取り除く
-st.info(f'🔢 10進数の「{number}」を2進数で表現すると「{binary_representation}」になります。 🔢')  # 2進数の表示をハイライト
+# Copyright
+st.subheader('© 2022-2024 Dit-Lab.(Daiki Ito). All Rights Reserved.')
