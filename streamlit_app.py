@@ -1,6 +1,8 @@
 import streamlit as st
 import yt_dlp
 import os
+import sys
+import io
 
 st.set_page_config(page_title="easyYDL", layout="wide")
 
@@ -31,14 +33,34 @@ if st.button("ダウンロード"):
                         'preferredcodec': 'mp3',
                         'preferredquality': '192',
                     }] if format == 'mp3' else [],
+                    'progress_hooks': [lambda d: st.text(f'ダウンロード進行状況: {d["_percent_str"]}')],
                 }
                 
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
+                # 標準出力と標準エラー出力をキャプチャ
+                old_stdout, old_stderr = sys.stdout, sys.stderr
+                sys.stdout = io.StringIO()
+                sys.stderr = io.StringIO()
                 
-            st.success(f"ダウンロードが完了しました！ {output_path} フォルダを確認してください。")
+                try:
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        ydl.download([url])
+                finally:
+                    # 標準出力と標準エラー出力を元に戻す
+                    output = sys.stdout.getvalue()
+                    error = sys.stderr.getvalue()
+                    sys.stdout, sys.stderr = old_stdout, old_stderr
+                
+                if error:
+                    st.error(f"エラーが発生しました: {error}")
+                else:
+                    st.success(f"ダウンロードが完了しました！ {output_path} フォルダを確認してください。")
+                    
+                # 詳細なログを表示
+                with st.expander("詳細なログを表示"):
+                    st.text(output)
+                
         except Exception as e:
-            st.error(f"エラーが発生しました: {str(e)}")
+            st.error(f"予期せぬエラーが発生しました: {str(e)}")
     else:
         st.warning("URLを入力してください。")
 
